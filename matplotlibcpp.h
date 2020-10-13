@@ -345,7 +345,7 @@ template <> struct select_npy_type<unsigned long long> { const static NPY_TYPES 
 template<typename Numeric>
 PyObject* get_array(const std::vector<Numeric>& v)
 {
-    npy_intp vsize = v.size();
+    auto vsize = static_cast<npy_intp>(v.size());
     NPY_TYPES type = select_npy_type<Numeric>::type;
     if (type == NPY_NOTYPE) {
         size_t memsize = v.size()*sizeof(double);
@@ -357,7 +357,7 @@ PyObject* get_array(const std::vector<Numeric>& v)
         return varray;
     }
     
-    PyObject* varray = PyArray_SimpleNewFromData(1, &vsize, type, (void*)(v.data()));
+    PyObject* varray = PyArray_SimpleNewFromData(1, &vsize, type, const_cast<void*>(static_cast<void const *>(v.data())));
     return varray;
 }
 
@@ -402,9 +402,9 @@ PyObject* get_array(const std::vector<Numeric>& v)
 // sometimes, for labels and such, we need string arrays
 inline PyObject * get_array(const std::vector<std::string>& strings)
 {
-  PyObject* list = PyList_New(strings.size());
+  PyObject* list = PyList_New(static_cast<Py_ssize_t>(strings.size()));
   for (std::size_t i = 0; i < strings.size(); ++i) {
-    PyList_SetItem(list, i, PyString_FromString(strings[i].c_str()));
+    PyList_SetItem(list, static_cast<Py_ssize_t>(i), PyString_FromString(strings[i].c_str()));
   }
   return list;
 }
@@ -838,12 +838,12 @@ inline void imshow(void *ptr, const NPY_TYPES type, const int rows, const int co
 
 inline void imshow(const unsigned char *ptr, const int rows, const int columns, const int colors, const std::map<std::string, std::string> &keywords = {}, PyObject** out = nullptr)
 {
-    detail::imshow((void *) ptr, NPY_UINT8, rows, columns, colors, keywords, out);
+    detail::imshow(const_cast<void *>(static_cast<void const *>(ptr)), NPY_UINT8, rows, columns, colors, keywords, out);
 }
 
 inline void imshow(const float *ptr, const int rows, const int columns, const int colors, const std::map<std::string, std::string> &keywords = {}, PyObject** out = nullptr)
 {
-    detail::imshow((void *) ptr, NPY_FLOAT, rows, columns, colors, keywords, out);
+    detail::imshow(const_cast<void*>(static_cast<void const *>(ptr)), NPY_FLOAT, rows, columns, colors, keywords, out);
 }
 
 #ifdef WITH_OPENCV
@@ -892,7 +892,7 @@ bool scatter(const std::vector<NumericX>& x,
     PyObject* yarray = detail::get_array(y);
 
     PyObject* kwargs = PyDict_New();
-    PyDict_SetItemString(kwargs, "s", PyLong_FromLong(s));
+    PyDict_SetItemString(kwargs, "s", PyLong_FromLong(static_cast<long int>(s)));
     for (const auto& it : keywords)
     {
         PyDict_SetItemString(kwargs, it.first.c_str(), PyString_FromString(it.second.c_str()));
@@ -1478,7 +1478,7 @@ template<typename Numeric>
 bool plot(const std::vector<Numeric>& y, const std::string& format = "")
 {
     std::vector<Numeric> x(y.size());
-    for(size_t i=0; i<x.size(); ++i) x.at(i) = i;
+    for(size_t i=0; i<x.size(); ++i) x.at(i) = static_cast<Numeric>(i);
     return plot(x,y,format);
 }
 
@@ -1593,8 +1593,8 @@ inline void figure_size(size_t w, size_t h)
 
     const size_t dpi = 100;
     PyObject* size = PyTuple_New(2);
-    PyTuple_SetItem(size, 0, PyFloat_FromDouble((double)w / dpi));
-    PyTuple_SetItem(size, 1, PyFloat_FromDouble((double)h / dpi));
+    PyTuple_SetItem(size, 0, PyFloat_FromDouble(static_cast<double>(w) / dpi));
+    PyTuple_SetItem(size, 1, PyFloat_FromDouble(static_cast<double>(h) / dpi));
 
     PyObject* kwargs = PyDict_New();
     PyDict_SetItemString(kwargs, "figsize", size);
@@ -1877,9 +1877,9 @@ inline void subplot(long nrows, long ncols, long plot_number)
     
     // construct positional args
     PyObject* args = PyTuple_New(3);
-    PyTuple_SetItem(args, 0, PyFloat_FromDouble(nrows));
-    PyTuple_SetItem(args, 1, PyFloat_FromDouble(ncols));
-    PyTuple_SetItem(args, 2, PyFloat_FromDouble(plot_number));
+    PyTuple_SetItem(args, 0, PyFloat_FromDouble(static_cast<double>(nrows)));
+    PyTuple_SetItem(args, 1, PyFloat_FromDouble(static_cast<double>(ncols)));
+    PyTuple_SetItem(args, 2, PyFloat_FromDouble(static_cast<double>(plot_number)));
 
     PyObject* res = PyObject_CallObject(detail::_interpreter::get().s_python_function_subplot, args);
     if(!res) throw std::runtime_error("Call to subplot() failed.");
@@ -2290,11 +2290,11 @@ inline std::vector<std::array<double, 2>> ginput(const int numClicks = 1, const 
     Py_DECREF(args);
     if (!res) throw std::runtime_error("Call to ginput() failed.");
 
-    const size_t len = PyList_Size(res);
+    const auto len = static_cast<size_t>(PyList_Size(res));
     std::vector<std::array<double, 2>> out;
     out.reserve(len);
     for (size_t i = 0; i < len; i++) {
-        PyObject *current = PyList_GetItem(res, i);
+        PyObject *current = PyList_GetItem(res, static_cast<Py_ssize_t>(i));
         std::array<double, 2> position;
         position[0] = PyFloat_AsDouble(PyTuple_GetItem(current, 0));
         position[1] = PyFloat_AsDouble(PyTuple_GetItem(current, 1));
