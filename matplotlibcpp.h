@@ -425,8 +425,8 @@ PyObject* get_listlist(const std::vector<std::vector<Numeric>>& ll)
 /// Plot a line through the given x and y data points..
 /// 
 /// See: https://matplotlib.org/3.2.1/api/_as_gen/matplotlib.pyplot.plot.html
-template<typename Numeric>
-bool plot(const std::vector<Numeric> &x, const std::vector<Numeric> &y, const std::map<std::string, std::string>& keywords)
+template<typename Numeric, typename numeric2>
+bool plot(const std::vector<Numeric> &x, const std::vector<numeric2> &y, const std::map<std::string, std::string>& keywords)
 {
     assert(x.size() == y.size());
 
